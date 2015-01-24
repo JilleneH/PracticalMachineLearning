@@ -1,0 +1,77 @@
+#Prediction Assignment
+
+```{r setoptions, echo=TRUE}
+```
+##Load and preprare the data
+
+This code  will load the data from the working directory.  This code assumes the data has been downloaded to the working directory.
+
+
+```{r}
+pmltraining <- read.csv("./pml-training.csv", na.strings= c("NA",""," "))
+pmltesting <- read.csv("./pml-testing.csv", na.strings= c("NA",""," "))
+```
+
+Clean the data by removing columns with NAs & identifier columns.  If we don't remove the extra data columns from the data sets then the randomForest function will not work.  It will error out.
+
+```{r}
+library(caret)
+pmltrainingNAs <- apply(pmltraining, 2, function(x) {sum(is.na(x))})
+pmltrainingclean <- pmltraining[,which(pmltrainingNAs == 0)]
+pmltrainingclean <- pmltrainingclean[8:length(pmltrainingclean)]
+
+pmltestingNAs <- apply(pmltesting, 2, function(x) {sum(is.na(x))})
+pmltestingclean <- pmltesting[,which(pmltestingNAs == 0)]
+pmltestingclean <- pmltestingclean[8:length(pmltestingclean)]
+```
+
+Create a plot to look at the data.
+
+```{r}
+featurePlot(x=pmltrainingclean[,1:4],
+            y = pmltrainingclean$classe,
+            plot="pairs")
+```
+
+This lattice plot shows the first 4 columns in the pmltrainingclean data set as the x values and the classe variable is the y variable.
+
+
+##Build Predictors & Model
+
+Build training and cross validation data sets
+
+```{r}
+inTrain <- createDataPartition(y = pmltrainingclean$classe, p = 0.7, list = FALSE)
+training <- pmltrainingclean[inTrain, ]
+crossval <- pmltrainingclean[-inTrain, ]
+```
+
+Show Summary Stats of Model
+
+```{r}
+summary(training)
+```
+
+Use the randomForest package to fit a model to predict the classe
+
+```{r}
+library(randomForest)
+model <- randomForest(classe ~ ., data = training)
+```
+
+Crossvalidate the model using the confusionMatrix function to make sure model fits
+
+```{r}
+predictCrossVal <- predict(model, crossval)
+confusionMatrix(crossval$classe, predictCrossVal)
+```
+
+*Kappa Statistic is 0.9936 and this reprsents the out of sample error*
+
+
+Use the predect function to predict the classes of the testing data set
+
+```{r}
+predictTest <- predict(model, pmltestingclean)
+predictTest
+```
